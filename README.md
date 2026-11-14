@@ -4,7 +4,7 @@ Aplikasi desktop Windows untuk mengelola arsip sekolah berdasarkan 8 Standar Nas
 
 ## Instalasi (pengguna)
 
-1. Jalankan `release\ARSIPKU-Setup-1.0.0.exe`.
+1. Jalankan `release\Arsipku-Setup-1.0.1.exe`.
 2. Installer belum ditandatangani secara digital, jadi Windows SmartScreen mungkin menampilkan peringatan. Klik **More info → Run anyway**.
 3. Pilih folder instalasi, lalu selesaikan. Shortcut akan dibuat di Desktop dan Start Menu.
 
@@ -44,7 +44,7 @@ Kebutuhan: Node.js 22.5+ (disarankan Node 24) dan npm. Build Tools C++ tidak dip
 ```bash
 npm install        # pasang dependensi
 npm run dev        # mode pengembangan (Vite + Electron, hot reload)
-npm run dist       # build installer → release\ARSIPKU-Setup-<versi>.exe
+npm run dist       # build installer → release\Arsipku-Setup-<versi>.exe
 ```
 
 Perintah lain:
