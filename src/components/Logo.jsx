@@ -1,0 +1,22 @@
+export function LogoMark({ className = 'size-9' }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#38bdf8" />
+      <path d="M14 20a4 4 0 0 1 4-4h28a4 4 0 0 1 4 4v4H14v-4Z" fill="#13263f" />
+      <path d="M16 27h32v19a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V27Z" fill="#fff" />
+      <rect x="26" y="32" width="12" height="4" rx="2" fill="#1e3a5f" />
+    </svg>
+  );
+}
+
+export function Logo({ name = 'ARSIPKU', dark = false }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <LogoMark />
+      <div className="leading-tight">
+        <div className={`text-base font-bold tracking-wide ${dark ? 'text-navy-950' : 'text-white'}`}>{name}</div>
+        <div className={`text-[11px] ${dark ? 'text-slate-500' : 'text-navy-200'}`}>Arsip Sekolah Digital</div>
+      </div>
+    </div>
+  );
+}
