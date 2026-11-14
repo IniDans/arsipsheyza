@@ -222,7 +222,7 @@ export default function ReportsPage() {
                           <td className="whitespace-nowrap">{formatDate(r.input_date, true)}</td>
                           <td className="text-xs">
                             <div className="text-slate-700">
-                              {r.category_code}. {r.category_name.replace(/^Standar /, '')}
+                              {r.category_code}. {r.category_name}
                             </div>
                             <div className="text-slate-500">{r.subcategory_name || '-'}</div>
                           </td>

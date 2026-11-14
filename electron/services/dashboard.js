@@ -21,6 +21,16 @@ function get() {
     )
     .all();
 
+  // Rincian per subkategori untuk grafik Distribusi Arsip per Sistem.
+  const bySub = conn
+    .prepare(
+      `SELECT s.id, s.category_id, s.subcategory_name, COUNT(a.id) AS total
+       FROM subcategories s LEFT JOIN archives a ON a.subcategory_id = s.id
+       GROUP BY s.id ORDER BY s.sort_order, s.id`
+    )
+    .all();
+  for (const c of byCategory) c.subcategories = bySub.filter((x) => x.category_id === c.id);
+
   // Tren 12 bulan terakhir berdasarkan tanggal input.
   const months = [];
   for (let i = 11; i >= 0; i -= 1) {

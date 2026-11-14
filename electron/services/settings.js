@@ -12,13 +12,13 @@ const { fail } = require('../errors');
 
 const EDITABLE = {
   app_name: 60,
-  school_name: 150,
-  school_npsn: 20,
-  school_address: 300,
-  school_phone: 30,
-  school_email: 100,
-  headmaster_name: 100,
-  headmaster_nip: 30,
+  company_name: 150,
+  company_reg_number: 50,
+  company_address: 300,
+  company_phone: 30,
+  company_email: 100,
+  leader_name: 100,
+  leader_title: 60,
 };
 
 function readAll() {
@@ -31,7 +31,7 @@ function publicInfo() {
   const s = readAll();
   return {
     app_name: s.app_name || 'ARSIPKU',
-    school_name: s.school_name || '',
+    company_name: s.company_name || '',
     version: app.getVersion(),
   };
 }
@@ -64,10 +64,10 @@ function update(values = {}) {
       const v = String(values[key] ?? '').trim();
       if (v.length > max) fail(`Isian "${key}" maksimal ${max} karakter.`);
       if (key === 'app_name' && !v) fail('Nama aplikasi wajib diisi.');
-      if (key === 'school_email' && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) fail('Format email sekolah tidak valid.');
+      if (key === 'company_email' && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) fail('Format email perusahaan tidak valid.');
       upsert.run(key, v);
     }
-    activity.log('Ubah Pengaturan', 'Memperbarui informasi sekolah dan aplikasi.');
+    activity.log('Ubah Pengaturan', 'Memperbarui informasi perusahaan dan aplikasi.');
   });
   return readAll();
 }

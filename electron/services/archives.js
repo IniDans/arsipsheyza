@@ -6,6 +6,7 @@ const db = require('../db');
 const session = require('../session');
 const activity = require('./activity');
 const files = require('./files');
+const categories = require('./categories');
 const windowRef = require('../window');
 const { fail } = require('../errors');
 
@@ -64,7 +65,47 @@ function validate(data) {
     if (!Number.isInteger(year) || year < 1900 || year > 2200) fail('Tahun dokumen tidak valid.');
   }
   out.document_year = year;
+  out.extra_fields = JSON.stringify(validateExtras(category.id, subcategoryId, data.extra_fields));
   return out;
+}
+
+const EXTRA_MAX_LEN = 200;
+const EXTRA_CHECKS = {
+  currency: [/^\d+(\.\d{1,2})?$/, 'harus berupa angka'],
+  number: [/^\d+(\.\d+)?$/, 'harus berupa angka'],
+  month: [/^\d{4}-(0[1-9]|1[0-2])$/, 'harus berformat bulan yang valid'],
+};
+
+// Memvalidasi isian Informasi Dokumen sesuai definisi kategori/subkategori.
+// Hanya kunci yang terdefinisi dan berisi yang disimpan.
+function validateExtras(categoryId, subcategoryId, raw) {
+  const input = raw && typeof raw === 'object' ? raw : {};
+  const out = {};
+  for (const def of categories.fieldsFor(categoryId, subcategoryId)) {
+    const value = String(input[def.key] ?? '').trim();
+    if (!value) {
+      if (def.required) fail(`${def.label} wajib diisi.`);
+      continue;
+    }
+    if (value.length > EXTRA_MAX_LEN) fail(`${def.label} maksimal ${EXTRA_MAX_LEN} karakter.`);
+    const check = EXTRA_CHECKS[def.type];
+    if (check && !check[0].test(value)) fail(`${def.label} ${check[1]}.`);
+    if (def.type === 'date' && !isValidDate(value)) fail(`${def.label} bukan tanggal yang valid.`);
+    if (def.type === 'select' && Array.isArray(def.options) && !def.options.includes(value)) {
+      fail(`Pilihan ${def.label} tidak dikenal.`);
+    }
+    out[def.key] = value;
+  }
+  return out;
+}
+
+function parseExtras(json) {
+  try {
+    const v = JSON.parse(json || '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
 }
 
 function nextArchiveNumber(inputDate) {
@@ -146,8 +187,8 @@ async function create(data = {}, filePaths = []) {
         .prepare(
           `INSERT INTO archives (archive_number, category_id, subcategory_id, input_date, document_type,
              document_number, document_name, description, attachment_description, storage_code,
-             document_year, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             document_year, extra_fields, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           number,
@@ -161,6 +202,7 @@ async function create(data = {}, filePaths = []) {
           v.attachment_description,
           v.storage_code,
           v.document_year,
+          v.extra_fields,
           user.id
         );
       const id = Number(res.lastInsertRowid);
@@ -197,7 +239,7 @@ async function update(id, data = {}, { addFiles = [], removeFileIds = [] } = {})
         .prepare(
           `UPDATE archives SET category_id = ?, subcategory_id = ?, input_date = ?, document_type = ?,
              document_number = ?, document_name = ?, description = ?, attachment_description = ?,
-             storage_code = ?, document_year = ?, updated_at = datetime('now', 'localtime')
+             storage_code = ?, document_year = ?, extra_fields = ?, updated_at = datetime('now', 'localtime')
            WHERE id = ?`
         )
         .run(
@@ -211,6 +253,7 @@ async function update(id, data = {}, { addFiles = [], removeFileIds = [] } = {})
           v.attachment_description,
           v.storage_code,
           v.document_year,
+          v.extra_fields,
           archiveId
         );
       const del = db.get().prepare('DELETE FROM archive_files WHERE id = ? AND archive_id = ?');
@@ -268,7 +311,13 @@ function get(id) {
     )
     .all(row.id)
     .map((f) => ({ ...f, missing: !files.existsStored(f.file_path) }));
-  return { ...row, files: fileRows };
+  const { extra_fields: extraJson, ...rest } = row;
+  return {
+    ...rest,
+    extra_fields: parseExtras(extraJson),
+    fields: categories.fieldsFor(row.category_id, row.subcategory_id),
+    files: fileRows,
+  };
 }
 
 // Membangun klausa WHERE untuk pencarian & filter (dipakai juga oleh laporan).
@@ -281,8 +330,9 @@ function buildFilter(f = {}) {
     where.push(`(a.document_name LIKE ? OR a.document_number LIKE ? OR a.archive_number LIKE ?
       OR a.document_type LIKE ? OR a.storage_code LIKE ? OR a.description LIKE ?
       OR c.category_name LIKE ? OR s.subcategory_name LIKE ?
-      OR CAST(a.document_year AS TEXT) LIKE ? OR a.input_date LIKE ?)`);
-    params.push(like, like, like, like, like, like, like, like, like, like);
+      OR CAST(a.document_year AS TEXT) LIKE ? OR a.input_date LIKE ?
+      OR EXISTS (SELECT 1 FROM json_each(a.extra_fields) j WHERE j.value LIKE ?))`);
+    params.push(like, like, like, like, like, like, like, like, like, like, like);
   }
   if (f.category_id) {
     where.push('a.category_id = ?');
@@ -453,4 +503,5 @@ module.exports = {
   exportFiles,
   pickFiles,
   isValidDate,
+  parseExtras,
 };

@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [info, setInfo] = useState({ app_name: 'ARSIPKU', school_name: '', version: '' });
+  const [info, setInfo] = useState({ app_name: 'ARSIPKU', company_name: '', version: '' });
   const [ready, setReady] = useState(false);
 
   const refreshInfo = useCallback(async () => {

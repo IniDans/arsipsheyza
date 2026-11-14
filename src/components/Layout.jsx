@@ -83,11 +83,11 @@ export default function Layout() {
         <div className="px-5 pt-6 pb-5">
           <Logo name={info.app_name} />
         </div>
-        {info.school_name && (
+        {info.company_name && (
           <div className="mx-4 mb-4 rounded-lg bg-white/5 px-3 py-2 text-xs text-navy-200">
-            <div className="text-[10px] tracking-wider text-navy-300 uppercase">Sekolah</div>
-            <div className="truncate font-medium text-white" title={info.school_name}>
-              {info.school_name}
+            <div className="text-[10px] tracking-wider text-navy-300 uppercase">Perusahaan</div>
+            <div className="truncate font-medium text-white" title={info.company_name}>
+              {info.company_name}
             </div>
           </div>
         )}

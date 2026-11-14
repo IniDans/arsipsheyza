@@ -7,6 +7,7 @@ const session = require('../session');
 const activity = require('./activity');
 const archives = require('./archives');
 const settings = require('./settings');
+const categories = require('./categories');
 const windowRef = require('../window');
 const { fail } = require('../errors');
 
@@ -24,6 +25,16 @@ function formatDate(iso) {
   if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso || '';
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+function formatExtra(field, value) {
+  if (field.type === 'currency') return `Rp ${Number(value).toLocaleString('id-ID')}`;
+  if (field.type === 'date') return formatDate(value);
+  if (field.type === 'month' && /^d{4}-d{2}$/.test(value)) {
+    const [y, m] = value.split('-').map(Number);
+    return `${MONTHS[m - 1]} ${y}`;
+  }
+  return value;
 }
 
 function normalize(params = {}) {
@@ -72,6 +83,7 @@ function query(params = {}) {
     .prepare(
       `SELECT a.id, a.archive_number, a.input_date, a.document_type, a.document_number, a.document_name,
               a.description, a.attachment_description, a.storage_code, a.document_year,
+              a.category_id, a.subcategory_id, a.extra_fields,
               c.code AS category_code, c.category_name, s.subcategory_name,
               (SELECT COUNT(*) FROM archive_files f WHERE f.archive_id = a.id) AS file_count
        FROM archives a JOIN categories c ON c.id = a.category_id
@@ -80,6 +92,20 @@ function query(params = {}) {
        ORDER BY c.sort_order, a.input_date, a.archive_number`
     )
     .all(...args);
+
+  // Isian Informasi Dokumen dirangkum menjadi teks "Label: nilai; ...".
+  const fieldCache = new Map();
+  for (const r of rows) {
+    const key = `${r.category_id}:${r.subcategory_id || ''}`;
+    if (!fieldCache.has(key)) fieldCache.set(key, categories.fieldsFor(r.category_id, r.subcategory_id));
+    const extra = archives.parseExtras(r.extra_fields);
+    r.extra_text = fieldCache
+      .get(key)
+      .filter((f) => extra[f.key])
+      .map((f) => `${f.label}: ${formatExtra(f, extra[f.key])}`)
+      .join('; ');
+    delete r.extra_fields;
+  }
 
   const summaryMap = new Map();
   for (const r of rows) {
@@ -104,7 +130,7 @@ function buildHtml(report) {
   const user = session.current();
   const today = new Date();
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const contact = [s.school_address, s.school_phone && `Telp. ${s.school_phone}`, s.school_email].filter(Boolean).join(' · ');
+  const contact = [s.company_address, s.company_phone && `Telp. ${s.company_phone}`, s.company_email].filter(Boolean).join(' · ');
 
   const body = report.rows.length
     ? report.rows
@@ -156,8 +182,8 @@ function buildHtml(report) {
   .total { margin-top: 6px; font-weight: 600; }
 </style></head><body>
   <div class="kop">
-    <h1>${esc((s.school_name || '').toUpperCase())}</h1>
-    ${s.school_npsn ? `<div class="meta">NPSN: ${esc(s.school_npsn)}</div>` : ''}
+    <h1>${esc((s.company_name || '').toUpperCase())}</h1>
+    ${s.company_reg_number ? `<div class="meta">NIB / NPWP: ${esc(s.company_reg_number)}</div>` : ''}
     ${contact ? `<div class="meta">${esc(contact)}</div>` : ''}
   </div>
   <h2>${esc(report.title)}</h2>
@@ -177,10 +203,9 @@ function buildHtml(report) {
     </div>
     <div class="sign">
       <div>${esc(formatDate(todayIso))}</div>
-      <div>Kepala Sekolah,</div>
+      <div>${esc(s.leader_title || 'Pimpinan')},</div>
       <div class="space"></div>
-      <div class="name">${esc(s.headmaster_name || '................................')}</div>
-      ${s.headmaster_nip ? `<div>NIP. ${esc(s.headmaster_nip)}</div>` : ''}
+      <div class="name">${esc(s.leader_name || '................................')}</div>
     </div>
   </div>
 </body></html>`;
@@ -250,6 +275,7 @@ async function exportXlsx(params) {
     { header: 'Jenis Dokumen', key: 'document_type', width: 20 },
     { header: 'Nomor Dokumen', key: 'document_number', width: 22 },
     { header: 'Nama Dokumen', key: 'document_name', width: 40 },
+    { header: 'Informasi Dokumen', key: 'extra_text', width: 48 },
     { header: 'Deskripsi', key: 'description', width: 40 },
     { header: 'Lampiran', key: 'attachment_description', width: 22 },
     { header: 'Kode Simpan', key: 'storage_code', width: 14 },
@@ -260,7 +286,7 @@ async function exportXlsx(params) {
 
   const lastCol = String.fromCharCode(64 + columns.length);
   const titleRows = [
-    [(s.school_name || '').toUpperCase(), { bold: true, size: 14 }],
+    [(s.company_name || '').toUpperCase(), { bold: true, size: 14 }],
     [report.title, { bold: true, size: 12 }],
     [report.subtitle, { italic: true, size: 10 }],
   ];
@@ -292,6 +318,7 @@ async function exportXlsx(params) {
       document_type: r.document_type,
       document_number: r.document_number,
       document_name: r.document_name,
+      extra_text: r.extra_text,
       description: r.description,
       attachment_description: r.attachment_description,
       storage_code: r.storage_code,

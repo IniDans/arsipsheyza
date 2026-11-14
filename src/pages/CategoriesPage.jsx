@@ -65,8 +65,8 @@ export default function CategoriesPage() {
         title="Kategori Arsip"
         description={
           isAdmin
-            ? 'Delapan standar pendidikan beserta subkategorinya. Anda dapat menambah, mengubah, atau menghapus subkategori.'
-            : 'Delapan standar pendidikan beserta subkategorinya.'
+            ? 'Kategori arsip perusahaan beserta subkategorinya. Anda dapat menambah, mengubah, atau menghapus subkategori; subkategori baru memakai isian umum tanpa isian khusus.'
+            : 'Kategori arsip perusahaan beserta subkategorinya.'
         }
       />
       {!cats ? (

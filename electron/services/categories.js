@@ -4,6 +4,25 @@ const session = require('../session');
 const activity = require('./activity');
 const { fail } = require('../errors');
 
+function parseFields(json) {
+  try {
+    const v = JSON.parse(json || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+// Isian Informasi Dokumen yang berlaku: isian kategori lalu isian subkategori.
+function fieldsFor(categoryId, subcategoryId) {
+  const conn = db.get();
+  const cat = conn.prepare('SELECT fields FROM categories WHERE id = ?').get(Number(categoryId));
+  const sub = subcategoryId ? conn.prepare('SELECT fields FROM subcategories WHERE id = ?').get(Number(subcategoryId)) : null;
+  const all = [...parseFields(cat?.fields), ...parseFields(sub?.fields)];
+  const seen = new Set();
+  return all.filter((f) => f && f.key && !seen.has(f.key) && seen.add(f.key));
+}
+
 function list() {
   session.require();
   const conn = db.get();
@@ -19,7 +38,11 @@ function list() {
        FROM subcategories s ORDER BY s.category_id, s.sort_order, s.id`
     )
     .all();
-  return cats.map((c) => ({ ...c, subcategories: subs.filter((s) => s.category_id === c.id) }));
+  return cats.map((c) => ({
+    ...c,
+    fields: parseFields(c.fields),
+    subcategories: subs.filter((s) => s.category_id === c.id).map((s) => ({ ...s, fields: parseFields(s.fields) })),
+  }));
 }
 
 function cleanName(name) {
@@ -87,4 +110,4 @@ function updateCategory(id, { description } = {}) {
   return true;
 }
 
-module.exports = { list, createSub, updateSub, removeSub, updateCategory };
+module.exports = { list, fieldsFor, parseFields, createSub, updateSub, removeSub, updateCategory };

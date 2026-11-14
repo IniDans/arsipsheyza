@@ -5,6 +5,26 @@ import { call } from '../lib/api';
 import { formatBytes, todayIso } from '../lib/format';
 import { Button, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { ExtraFieldsInput, validateExtraFields } from '../components/ExtraFields';
+
+const DOC_TYPE_SUGGESTIONS = [
+  'Invoice',
+  'Kuitansi',
+  'Faktur',
+  'Bukti Transfer',
+  'Slip Gaji',
+  'Kontrak',
+  'Perjanjian',
+  'Memorandum of Understanding',
+  'Surat Keputusan',
+  'Surat Masuk',
+  'Surat Keluar',
+  'Laporan',
+  'Akta',
+  'Sertifikat',
+  'Memo Internal',
+  'Notulen',
+];
 
 const BLANK = {
   input_date: todayIso(),
@@ -17,6 +37,7 @@ const BLANK = {
   attachment_description: '',
   storage_code: '',
   document_year: String(new Date().getFullYear()),
+  extra_fields: {},
 };
 
 export default function ArchiveFormPage() {
@@ -56,6 +77,7 @@ export default function ArchiveFormPage() {
             attachment_description: a.attachment_description,
             storage_code: a.storage_code,
             document_year: a.document_year ? String(a.document_year) : '',
+            extra_fields: a.extra_fields || {},
           });
         }
       } catch (err) {
@@ -74,6 +96,16 @@ export default function ArchiveFormPage() {
 
   const category = categories.find((c) => String(c.id) === form.category_id);
   const subs = category?.subcategories || [];
+  const subcategory = subs.find((s) => String(s.id) === form.subcategory_id);
+  const extraFields = useMemo(() => {
+    const seen = new Set();
+    return [...(category?.fields || []), ...(subcategory?.fields || [])].filter((f) => !seen.has(f.key) && seen.add(f.key));
+  }, [category, subcategory]);
+
+  const setExtra = (key, value) => {
+    setErrors((er) => ({ ...er, extra: { ...er.extra, [key]: undefined } }));
+    setForm((f) => ({ ...f, extra_fields: { ...f.extra_fields, [key]: value } }));
+  };
 
   const set = (k) => (e) => {
     const v = e.target.value;
@@ -123,6 +155,8 @@ export default function ArchiveFormPage() {
     if (!form.input_date) e.input_date = 'Tanggal input wajib diisi.';
     if (form.document_year && !/^\d{4}$/.test(form.document_year)) e.document_year = 'Tahun harus 4 digit.';
     if (totalFiles === 0) e.files = 'Unggah minimal satu file PDF.';
+    const extra = validateExtraFields(extraFields, form.extra_fields);
+    if (Object.keys(extra).length) e.extra = extra;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -133,12 +167,17 @@ export default function ArchiveFormPage() {
     setSaving(true);
     try {
       const paths = newFiles.map((f) => f.path);
+      // Hanya isian yang berlaku untuk kategori/subkategori terpilih yang dikirim.
+      const payload = {
+        ...form,
+        extra_fields: Object.fromEntries(extraFields.map((f) => [f.key, form.extra_fields[f.key] ?? ''])),
+      };
       if (isEdit) {
-        await call('archives:update', id, form, { addFiles: paths, removeFileIds: removeIds });
+        await call('archives:update', id, payload, { addFiles: paths, removeFileIds: removeIds });
         toast.success('Perubahan arsip berhasil disimpan.');
         navigate(`/arsip/${id}`);
       } else {
-        const res = await call('archives:create', form, paths);
+        const res = await call('archives:create', payload, paths);
         toast.success(`Arsip ${res.archive_number} berhasil disimpan.`);
         navigate(`/arsip/${res.id}`);
       }
@@ -149,7 +188,7 @@ export default function ArchiveFormPage() {
   };
 
   const typeOptions = useMemo(
-    () => [...new Set([...docTypes, 'Surat Keputusan', 'Surat Masuk', 'Surat Keluar', 'Laporan', 'Notulen', 'Sertifikat', 'Daftar Hadir', 'Program Kerja'])],
+    () => [...new Set([...docTypes, ...DOC_TYPE_SUGGESTIONS])],
     [docTypes]
   );
 
@@ -192,7 +231,7 @@ export default function ArchiveFormPage() {
           <section className="card p-6">
             <h2 className="mb-4 font-semibold text-slate-900">Klasifikasi</h2>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Kategori (Standar)" required error={errors.category_id}>
+              <Field label="Kategori" required error={errors.category_id}>
                 <Select value={form.category_id} onChange={set('category_id')}>
                   <option value="">Pilih kategori…</option>
                   {categories.map((c) => (
@@ -228,7 +267,18 @@ export default function ArchiveFormPage() {
           </section>
 
           <section className="card p-6">
-            <h2 className="mb-4 font-semibold text-slate-900">Informasi Dokumen</h2>
+            <div className="mb-4">
+              <h2 className="font-semibold text-slate-900">Informasi Dokumen</h2>
+              {category && (
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {subcategory
+                    ? `Isian disesuaikan untuk ${category.category_name} — ${subcategory.subcategory_name}.`
+                    : subs.length
+                      ? 'Pilih subkategori untuk menampilkan isian khususnya.'
+                      : `Isian disesuaikan untuk ${category.category_name}.`}
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Nama Dokumen" required error={errors.document_name} className="col-span-2">
                 <Input value={form.document_name} onChange={set('document_name')} placeholder="Judul dokumen" maxLength={255} />
@@ -250,6 +300,16 @@ export default function ArchiveFormPage() {
               <Field label="Nomor Dokumen">
                 <Input value={form.document_number} onChange={set('document_number')} placeholder="Nomor surat / dokumen" maxLength={100} />
               </Field>
+              {extraFields.length > 0 && (
+                <div className="col-span-2 grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                  <ExtraFieldsInput
+                    fields={extraFields}
+                    values={form.extra_fields}
+                    errors={errors.extra}
+                    onChange={setExtra}
+                  />
+                </div>
+              )}
               <Field label="Deskripsi" className="col-span-2">
                 <Textarea value={form.description} onChange={set('description')} placeholder="Keterangan singkat isi dokumen" maxLength={2000} />
               </Field>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  School,
+  Building2,
   HardDrive,
   DatabaseBackup,
   UserCog,
@@ -24,7 +24,7 @@ import ChangePasswordForm from '../components/ChangePasswordForm';
 import { LogoMark } from '../components/Logo';
 
 const TABS = [
-  { id: 'sekolah', label: 'Informasi Sekolah', icon: School, admin: true },
+  { id: 'perusahaan', label: 'Informasi Perusahaan', icon: Building2, admin: true },
   { id: 'penyimpanan', label: 'Lokasi Penyimpanan', icon: HardDrive, admin: true },
   { id: 'backup', label: 'Backup & Restore', icon: DatabaseBackup },
   { id: 'akun', label: 'Akun Saya', icon: UserCog },
@@ -46,7 +46,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Pengaturan" description="Konfigurasi sekolah, penyimpanan, backup, dan akun Anda." />
+      <PageHeader title="Pengaturan" description="Konfigurasi perusahaan, penyimpanan, backup, dan akun Anda." />
       <div className="grid gap-6 lg:grid-cols-[15rem_1fr]">
         <nav className="card h-fit p-2">
           {tabs.map((t) => (
@@ -69,7 +69,7 @@ export default function SettingsPage() {
             <Spinner />
           ) : (
             <>
-              {tab === 'sekolah' && <SchoolTab data={data} onSaved={load} />}
+              {tab === 'perusahaan' && <CompanyTab data={data} onSaved={load} />}
               {tab === 'penyimpanan' && <StorageTab data={data} onChanged={load} />}
               {tab === 'backup' && <BackupTab data={data} />}
               {tab === 'akun' && <AccountTab />}
@@ -96,18 +96,18 @@ function Section({ title, description, children, footer }) {
   );
 }
 
-// ---------- Informasi sekolah ----------
-const SCHOOL_FIELDS = [
+// ---------- Informasi perusahaan ----------
+const COMPANY_FIELDS = [
   ['app_name', 'Nama aplikasi', 60],
-  ['school_name', 'Nama sekolah', 150],
-  ['school_npsn', 'NPSN', 20],
-  ['school_phone', 'Telepon', 30],
-  ['school_email', 'Email sekolah', 100],
-  ['headmaster_name', 'Nama kepala sekolah', 100],
-  ['headmaster_nip', 'NIP kepala sekolah', 30],
+  ['company_name', 'Nama perusahaan', 150],
+  ['company_reg_number', 'NIB / NPWP', 50],
+  ['company_phone', 'Telepon', 30],
+  ['company_email', 'Email perusahaan', 100],
+  ['leader_name', 'Nama pimpinan', 100],
+  ['leader_title', 'Jabatan pimpinan', 60, 'Ditampilkan di atas tanda tangan laporan, mis. Direktur Utama'],
 ];
 
-function SchoolTab({ data, onSaved }) {
+function CompanyTab({ data, onSaved }) {
   const { refreshInfo } = useAuth();
   const toast = useToast();
   const [values, setValues] = useState(() => ({ ...data.values }));
@@ -118,10 +118,10 @@ function SchoolTab({ data, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = Object.fromEntries([...SCHOOL_FIELDS.map(([k]) => k), 'school_address'].map((k) => [k, values[k] ?? '']));
+      const payload = Object.fromEntries([...COMPANY_FIELDS.map(([k]) => k), 'company_address'].map((k) => [k, values[k] ?? '']));
       await call('settings:update', payload);
       await Promise.all([refreshInfo(), onSaved()]);
-      toast.success('Informasi sekolah disimpan.');
+      toast.success('Informasi perusahaan disimpan.');
     } catch (err) {
       toast.error(err);
     } finally {
@@ -132,7 +132,7 @@ function SchoolTab({ data, onSaved }) {
   return (
     <form onSubmit={save}>
       <Section
-        title="Informasi Sekolah"
+        title="Informasi Perusahaan"
         description="Digunakan pada kop laporan, halaman login, dan tanda tangan laporan."
         footer={
           <Button type="submit" icon={Save} loading={saving}>
@@ -141,13 +141,13 @@ function SchoolTab({ data, onSaved }) {
         }
       >
         <div className="grid gap-4 md:grid-cols-2">
-          {SCHOOL_FIELDS.map(([k, label, max]) => (
-            <Field key={k} label={label} required={k === 'app_name'} className={k === 'school_name' ? 'md:col-span-2' : ''}>
-              <Input value={values[k] || ''} onChange={set(k)} maxLength={max} type={k === 'school_email' ? 'email' : 'text'} />
+          {COMPANY_FIELDS.map(([k, label, max, hint]) => (
+            <Field key={k} label={label} hint={hint} required={k === 'app_name'} className={k === 'company_name' ? 'md:col-span-2' : ''}>
+              <Input value={values[k] || ''} onChange={set(k)} maxLength={max} type={k === 'company_email' ? 'email' : 'text'} />
             </Field>
           ))}
-          <Field label="Alamat sekolah" className="md:col-span-2">
-            <Textarea value={values.school_address || ''} onChange={set('school_address')} maxLength={300} />
+          <Field label="Alamat perusahaan" className="md:col-span-2">
+            <Textarea value={values.company_address || ''} onChange={set('company_address')} maxLength={300} />
           </Field>
         </div>
       </Section>
@@ -630,11 +630,11 @@ function AboutTab({ data }) {
         <LogoMark className="size-14" />
         <div>
           <div className="text-xl font-semibold text-slate-900">{info.app_name || 'ARSIPKU'}</div>
-          <div className="text-sm text-slate-500">Sistem Arsip Digital Sekolah · Versi {data.version}</div>
+          <div className="text-sm text-slate-500">Sistem Arsip Digital Perusahaan · Versi {data.version}</div>
         </div>
       </div>
       <p className="mt-5 max-w-2xl text-sm text-slate-600">
-        Aplikasi desktop offline untuk mengelola arsip dokumen sekolah berdasarkan 8 Standar Nasional Pendidikan. Seluruh data tersimpan di komputer
+        Aplikasi desktop offline untuk mengelola arsip dokumen perusahaan: keuangan, data perusahaan, dan data karyawan. Seluruh data tersimpan di komputer
         ini, tanpa koneksi internet.
       </p>
       <dl className="mt-5 grid max-w-md grid-cols-[9rem_1fr] gap-y-1.5 text-sm">

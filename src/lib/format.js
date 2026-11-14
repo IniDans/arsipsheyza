@@ -38,6 +38,20 @@ export function formatBytes(bytes) {
 
 export const formatNumber = (n) => Number(n || 0).toLocaleString('id-ID');
 
+export function formatMonthLong(ym) {
+  const m = String(ym || '').match(/^(\d{4})-(\d{2})$/);
+  return m ? `${MONTHS[Number(m[2]) - 1]} ${m[1]}` : ym || '-';
+}
+
+// Menampilkan nilai isian Informasi Dokumen sesuai tipenya.
+export function formatExtraValue(field, value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (field.type === 'currency') return `Rp ${Number(value).toLocaleString('id-ID')}`;
+  if (field.type === 'date') return formatDate(value);
+  if (field.type === 'month') return formatMonthLong(value);
+  return String(value);
+}
+
 export function todayIso() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');

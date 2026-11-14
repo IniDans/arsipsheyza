@@ -98,7 +98,7 @@ export default function UsersPage() {
     <>
       <PageHeader
         title="Manajemen Pengguna"
-        description="Operator dapat mengelola arsip; hanya administrator yang dapat mengelola pengguna dan pengaturan sekolah."
+        description="Operator dapat mengelola arsip; hanya administrator yang dapat mengelola pengguna dan pengaturan perusahaan."
         actions={
           <Button icon={UserPlus} onClick={openCreate}>
             Tambah Pengguna

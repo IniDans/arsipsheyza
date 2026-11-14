@@ -16,7 +16,11 @@ export default function ArchivesPage() {
   const [options, setOptions] = useState({ documentTypes: [], years: [] });
   const [keyword, setKeyword] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [filters, setFilters] = useState({ ...EMPTY, category_id: params.get('kategori') || '' });
+  const [filters, setFilters] = useState({
+    ...EMPTY,
+    category_id: params.get('kategori') || '',
+    subcategory_id: params.get('kategori') ? params.get('subkategori') || '' : '',
+  });
   const [showFilters, setShowFilters] = useState(!!params.get('kategori'));
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
@@ -81,7 +85,7 @@ export default function ArchivesPage() {
     <>
       <PageHeader
         title="Data Arsip"
-        description="Kelola seluruh dokumen arsip sekolah."
+        description="Kelola seluruh dokumen arsip perusahaan."
         actions={
           <Button icon={Plus} onClick={() => navigate('/arsip/baru')}>
             Tambah Arsip
@@ -225,7 +229,7 @@ export default function ArchivesPage() {
                         <div className="flex items-start gap-2">
                           <CategoryCode code={a.category_code} className="size-6 text-[11px]" />
                           <div className="text-xs">
-                            <div className="text-slate-700">{a.category_name.replace(/^Standar /, '')}</div>
+                            <div className="text-slate-700">{a.category_name}</div>
                             <div className="text-slate-500">{a.subcategory_name || '-'}</div>
                           </div>
                         </div>

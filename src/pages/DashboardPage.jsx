@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Archive, CalendarPlus, FileText, Layers, Plus, Activity, ArrowRight } from 'lucide-react';
+import { Archive, CalendarPlus, ChevronRight, FileText, Layers, Plus, Activity, ArrowRight } from 'lucide-react';
 import { call } from '../lib/api';
 import { formatBytes, formatDate, formatDateTime, formatMonth, formatNumber } from '../lib/format';
 import { Button, CategoryCode, EmptyState, PageHeader, Spinner } from '../components/ui';
@@ -22,37 +22,85 @@ function StatCard({ icon: Icon, label, value, sub }) {
   );
 }
 
-// Distribusi arsip per standar: satu seri, batang horizontal dengan label langsung.
-function CategoryBars({ data, onSelect }) {
+// Distribusi arsip per sistem: batang horizontal per kategori, dapat dibuka
+// untuk melihat rincian per subkategori (skala sama dengan batang kategori).
+function SystemBars({ data, onSelectCategory, onSelectSub }) {
   const max = Math.max(1, ...data.map((d) => d.total));
   const total = data.reduce((s, d) => s + d.total, 0);
+  const [open, setOpen] = useState(() => {
+    const top = [...data].sort((x, y) => y.total - x.total)[0];
+    return new Set(top && top.total > 0 ? [top.id] : []);
+  });
+  const toggle = (id) =>
+    setOpen((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const bar = (value, cls) => (
+    <span className="relative h-3.5 rounded bg-slate-100">
+      <span
+        className={`absolute inset-y-0 left-0 rounded-r transition-all ${cls}`}
+        style={{ width: value ? `max(${(value / max) * 100}%, 4px)` : 0 }}
+      />
+    </span>
+  );
+  const row = 'grid w-full grid-cols-[minmax(0,15rem)_1fr_4.5rem] items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50';
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {data.map((d) => {
         const pct = total ? Math.round((d.total / total) * 100) : 0;
+        const isOpen = open.has(d.id);
+        const subs = d.subcategories || [];
         return (
-          <button
-            key={d.id}
-            type="button"
-            onClick={() => onSelect(d)}
-            title={`${d.category_name}: ${formatNumber(d.total)} arsip (${pct}%)`}
-            className="group grid w-full grid-cols-[minmax(0,15rem)_1fr_4.5rem] items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50"
-          >
-            <span className="flex min-w-0 items-center gap-2.5">
-              <CategoryCode code={d.code} className="size-6 text-[11px]" />
-              <span className="truncate text-sm text-slate-700">{d.category_name.replace(/^Standar /, '')}</span>
-            </span>
-            <span className="relative h-3.5 rounded bg-slate-100">
-              <span
-                className="absolute inset-y-0 left-0 rounded-r bg-navy-700 transition-all group-hover:bg-navy-900"
-                style={{ width: d.total ? `max(${(d.total / max) * 100}%, 4px)` : 0 }}
-              />
-            </span>
-            <span className="text-right text-sm text-slate-700 tabular-nums">
-              {formatNumber(d.total)}
-              <span className="ml-1 text-xs text-slate-400">{pct}%</span>
-            </span>
-          </button>
+          <div key={d.id}>
+            <button
+              type="button"
+              onClick={() => (subs.length ? toggle(d.id) : onSelectCategory(d))}
+              aria-expanded={subs.length ? isOpen : undefined}
+              title={`${d.category_name}: ${formatNumber(d.total)} arsip (${pct}%)`}
+              className={`group ${row}`}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <ChevronRight
+                  className={`size-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''} ${subs.length ? '' : 'invisible'}`}
+                />
+                <CategoryCode code={d.code} className="size-6 text-[11px]" />
+                <span className="truncate text-sm font-medium text-slate-800">{d.category_name}</span>
+              </span>
+              {bar(d.total, 'bg-navy-700 group-hover:bg-navy-900')}
+              <span className="text-right text-sm text-slate-700 tabular-nums">
+                {formatNumber(d.total)}
+                <span className="ml-1 text-xs text-slate-400">{pct}%</span>
+              </span>
+            </button>
+            {isOpen && (
+              <div className="mb-2 ml-4 border-l border-slate-200 pl-2">
+                {subs.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onSelectSub(d, s)}
+                    title={`${s.subcategory_name}: ${formatNumber(s.total)} arsip`}
+                    className={`group ${row} py-1`}
+                  >
+                    <span className="truncate pl-6 text-[13px] text-slate-600">{s.subcategory_name}</span>
+                    {bar(s.total, 'bg-sky-400 group-hover:bg-sky-500')}
+                    <span className="text-right text-[13px] text-slate-600 tabular-nums">{formatNumber(s.total)}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => onSelectCategory(d)}
+                  className="mt-0.5 ml-8 flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-navy-700 hover:text-navy-900"
+                >
+                  Lihat semua arsip {d.category_name} <ArrowRight className="size-3" />
+                </button>
+              </div>
+            )}
+          </div>
         );
       })}
     </div>
@@ -125,7 +173,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title={`${greet}, ${user.full_name.split(' ')[0]}`}
-        description="Ringkasan arsip sekolah yang tersimpan di komputer ini."
+        description="Ringkasan arsip perusahaan yang tersimpan di komputer ini."
         actions={
           <Button icon={Plus} onClick={() => navigate('/arsip/baru')}>
             Tambah Arsip
@@ -148,7 +196,7 @@ export default function DashboardPage() {
               icon={Layers}
               label="Kategori Terisi"
               value={`${data.categoriesUsed} / ${data.byCategory.length}`}
-              sub="Standar pendidikan yang memiliki arsip"
+              sub="Kategori yang memiliki arsip"
             />
             <StatCard
               icon={FileText}
@@ -162,11 +210,15 @@ export default function DashboardPage() {
             <section className="card p-5 xl:col-span-3">
               <div className="mb-4 flex items-baseline justify-between">
                 <div>
-                  <h2 className="font-semibold text-slate-900">Distribusi Arsip per Standar</h2>
-                  <p className="text-xs text-slate-500">Jumlah arsip pada 8 standar pendidikan. Klik untuk melihat datanya.</p>
+                  <h2 className="font-semibold text-slate-900">Distribusi Arsip per Sistem</h2>
+                  <p className="text-xs text-slate-500">Jumlah arsip per kategori. Buka kategori untuk melihat rincian subkategori.</p>
                 </div>
               </div>
-              <CategoryBars data={data.byCategory} onSelect={(d) => navigate(`/arsip?kategori=${d.id}`)} />
+              <SystemBars
+                data={data.byCategory}
+                onSelectCategory={(d) => navigate(`/arsip?kategori=${d.id}`)}
+                onSelectSub={(d, sub) => navigate(`/arsip?kategori=${d.id}&subkategori=${sub.id}`)}
+              />
             </section>
 
             <section className="card p-5 xl:col-span-2">
@@ -187,7 +239,7 @@ export default function DashboardPage() {
               {data.recentArchives.length === 0 ? (
                 <EmptyState
                   title="Belum ada arsip"
-                  description="Mulai dengan menambahkan dokumen pertama sekolah Anda."
+                  description="Mulai dengan menambahkan dokumen pertama perusahaan Anda."
                   action={
                     <Button size="sm" icon={Plus} onClick={() => navigate('/arsip/baru')}>
                       Tambah Arsip

@@ -15,7 +15,7 @@ export function Logo({ name = 'ARSIPKU', dark = false }) {
       <LogoMark />
       <div className="leading-tight">
         <div className={`text-base font-bold tracking-wide ${dark ? 'text-navy-950' : 'text-white'}`}>{name}</div>
-        <div className={`text-[11px] ${dark ? 'text-slate-500' : 'text-navy-200'}`}>Arsip Sekolah Digital</div>
+        <div className={`text-[11px] ${dark ? 'text-slate-500' : 'text-navy-200'}`}>Arsip Perusahaan Digital</div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Pencil, Trash2, Download, ExternalLink, FileText, AlertTriangle } from 'lucide-react';
 import { call } from '../lib/api';
-import { formatBytes, formatDate, formatDateTime } from '../lib/format';
+import { formatBytes, formatDate, formatDateTime, formatExtraValue } from '../lib/format';
 import { Button, CategoryCode, ConfirmDialog, EmptyState, Spinner, cx } from '../components/ui';
 import { useToast } from '../components/Toast';
 import PdfViewer from '../components/PdfViewer';
@@ -118,6 +118,23 @@ export default function ArchiveDetailPage() {
               </div>
             )}
           </section>
+
+          {a.fields.length > 0 && (
+            <section className="card p-5">
+              <h2 className="font-semibold text-slate-900">Informasi Dokumen</h2>
+              <p className="mb-3 text-xs text-slate-500">{a.subcategory_name || a.category_name}</p>
+              <dl className="space-y-2.5 text-sm">
+                {a.fields.map((f) => (
+                  <div key={f.key} className="grid grid-cols-[7.5rem_1fr] gap-2">
+                    <dt className="text-slate-500">{f.label}</dt>
+                    <dd className={cx('break-words text-slate-800', f.type === 'currency' && 'tabular-nums')}>
+                      {formatExtraValue(f, a.extra_fields[f.key]) || '-'}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
 
           <section className="card p-5">
             <h2 className="mb-3 font-semibold text-slate-900">File ({a.files.length})</h2>

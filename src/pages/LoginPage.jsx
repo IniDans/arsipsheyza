@@ -38,17 +38,17 @@ export default function LoginPage() {
         <Logo name={info.app_name} />
         <div className="relative max-w-md">
           <h1 className="text-3xl leading-tight font-semibold">
-            Satu aplikasi, delapan standar, arsip sekolah yang tertata.
+            Satu aplikasi untuk seluruh arsip perusahaan yang tertata.
           </h1>
           <p className="mt-4 text-navy-200">
-            Simpan, klasifikasikan, cari, dan laporkan dokumen administrasi sekolah langsung dari komputer ini.
+            Simpan, klasifikasikan, cari, dan laporkan dokumen keuangan, perusahaan, dan karyawan langsung dari komputer ini.
           </p>
           <ul className="mt-8 space-y-3 text-sm text-navy-100">
             <li className="flex items-center gap-3">
               <WifiOff className="size-4 text-sky-300" /> Berjalan sepenuhnya tanpa internet
             </li>
             <li className="flex items-center gap-3">
-              <Layers className="size-4 text-sky-300" /> Terstruktur sesuai 8 Standar Nasional Pendidikan
+              <Layers className="size-4 text-sky-300" /> Terstruktur: Keuangan, Data Perusahaan, Data Karyawan
             </li>
             <li className="flex items-center gap-3">
               <ShieldCheck className="size-4 text-sky-300" /> Data tersimpan lokal dengan backup & restore
@@ -56,7 +56,7 @@ export default function LoginPage() {
           </ul>
         </div>
         <div className="relative text-xs text-navy-300">
-          {info.school_name} {info.version && `· Versi ${info.version}`}
+          {info.company_name} {info.version && `· Versi ${info.version}`}
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export default function LoginPage() {
             <Logo name={info.app_name} dark />
           </div>
           <h2 className="text-2xl font-semibold text-slate-900">Masuk</h2>
-          <p className="mt-1 text-sm text-slate-500">Gunakan akun yang diberikan oleh administrator sekolah.</p>
+          <p className="mt-1 text-sm text-slate-500">Gunakan akun yang diberikan oleh administrator perusahaan.</p>
 
           <div className="mt-8 space-y-4">
             <Field label="Username">
